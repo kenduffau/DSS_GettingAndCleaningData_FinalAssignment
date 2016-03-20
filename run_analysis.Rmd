@@ -118,14 +118,14 @@ In general the guidelines outlined in the Getting and Cleaning Data lectures wer
 ``` 
  
 ##5th Requirement - Create a tidy data set with the average of each variable for each activity and each subject. Write the tidy data to an output file. 
-This step used the aggregate() function to group by subject and activity and calculate the mean on the measurement variables. The results are stored in the tidyHarData dataset, and are written to the local directory as "Summary_HAR_Statistics.csv".
+This step used the aggregate() function to group by subject and activity and calculate the mean on the measurement variables. The results are stored in the tidyHarData dataset, and are written to the local directory as "Summary_HAR_Statistics.txt".
 
 ```{r}
 ##create a tidy data set with the average of each variable for each activity and each subject.
  tidyHarData <- aggregate(. ~subject + activity, refinedHarData, mean)
  
 ##write tidy data set to output file
- write.csv(tidyHarData, file = "Summary_HAR_Statistics.csv", row.names = FALSE)
+ write.table(tidyHarData, file = "Summary_HAR_Statistics.txt", row.names = FALSE)
  
 ##End of R Script
 ```

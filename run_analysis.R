@@ -53,7 +53,7 @@ names(refinedHarData) <- sub("mag", "magnitude", names(refinedHarData))
 tidyHarData <- aggregate(. ~subject + activity, refinedHarData, mean)
 
 ##write tidy data set to output file
-write.csv(tidyHarData, file = "Summary_HAR_Statistics.csv", row.names = FALSE)
+write.table(tidyHarData, file = "Summary_HAR_Statistics.txt", row.names = FALSE)
 
 ##End of R Script
 
