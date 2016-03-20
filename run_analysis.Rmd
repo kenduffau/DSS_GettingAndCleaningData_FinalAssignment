@@ -1,0 +1,134 @@
+---
+title: "DSS_GettingAndCleaningData_run_analysis"
+output: html_document
+---
+
+#Summary
+This document describes the procedures used to access, download and manipulate the Human Activity Recognition Using Smartphones Dataset. The dataset was created by Jorge L. Reyes-Ortiz, Davide Anguita, Alessandro Ghio, and Luca Oneto of Smartlab - Non Linear Complex Systems Laboratory and hosted by the UCI Machine Learning Laboratory.
+
+#Study Design
+The dataset consists of 2947 test and 7352 training observations of 30 subjects conducting 6 different activities, resulting in a total of 561 measurements of acceleration and angular velocity as measured by Samsung Galaxy S-II's accelerometer and gyroscope. More detail on the measurements is available at https://sites.google.com/site/harsmartlab/ or within the README.txt available with the download.
+
+#Required Libraries:
+None. This R script does not require any additional libraries as it uses functions available in the Base R packages.
+
+#Code Book
+
+##Variable Description
+* subject: The numeric identify (1:30) of a test participant
+* activity: The numeric identity (1:6) of an activity in the first 2 requirements. The numeric identify is replaced with the literal value in the 3rd requirement. These values, in order, were;
+* WALKING
+* WALKING_UPSTAIRS
+* WALKING_DOWNSTAIRS
+* SITTING
+* STANDING
+* LAYING
+
+* Measurement variables: All time values are measured in seconds. All freq values are measured in hertz. The final dataset (tidyHarData) contains measurement averages by person by activity. The variable names were not altered though the value that is represented is no longer original data but derived from it.
+
+##Requirement 1: Import the test and train data into a single dataset.
+First, the data must be downloaded from  "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip". Implied within this requirement is to include the subject and activity data, aligned with the correct data, as part of the combined dataset. The data results files do not contain variable names so the features.txt file must also be imported and aligned with the data results. The directory locations of these files are included in the R script. The final output is stored in the combinedHarData dataset.
+
+##Required files:
+* X_test.txt
+* y_test.txt
+* subject_test.txt
+* X_train.txt
+* y_train.txt
+* subject_train.txt
+* features.txt
+
+```{r}
+ ## Get UCI HAR Analysis Data into working directory
+ 
+ if(!file.exists("./Data")){dir.create("./Data")}
+ zipURL <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+ zipFile <- download.file(zipURL, destfile = "./Data/UCIData.zip")
+ unzip("./Data/UCIData.zip")
+ 
+ ## Read in all the data as separate tables to stage for combining and merging
+ 
+ testXData <- read.table("./UCI HAR Dataset/test/X_test.txt", stringsAsFactors = FALSE)
+ testyData <- read.table("./UCI HAR Dataset/test/y_test.txt")
+ testSubjectData <- read.table("./UCI HAR Dataset/test/subject_test.txt")
+ trainXData <- read.table("./UCI HAR Dataset/train/X_train.txt", stringsAsFactors = FALSE)
+ trainyData <- read.table("./UCI HAR Dataset/train/y_train.txt")
+ trainSubjectData <- read.table("./UCI HAR Dataset/train/subject_train.txt")
+ featureData <- read.table("./UCI HAR Dataset/features.txt")
+ 
+ ## Combine table data and assign column names
+ dataStats <- rbind(testXData,trainXData)
+ colnames(dataStats) <- featureData$V2
+ subjectId <- rbind(testSubjectData,trainSubjectData)
+ colnames(subjectId) <- c("Subject")
+ activityId <- rbind(testyData,trainyData)
+ colnames(activityId) <- c("Activity")
+ 
+ ## 1st Requirement - Put it all together in one data frame
+ combinedHarData <- cbind(subjectId, activityId, dataStats)
+```
+
+##2nd Requirement - Extract only columns with mean or standard deviation values. 
+The following R code uses grep to find all variables with "std" or "mean" in their names and puts them in a character vector. The next step was to subset these columns from the original dataset while also subsetting the subject and activity columns. The output is stored in the refinedHarData dataset.
+
+```{r}
+ ## 2nd Requirement - Extract only columns with mean or standard deviation values
+ ## identify variable with "std" or "mean" and store in character vector
+ meanSDHarCols <- grep("std|mean", names(combinedHarData), value = TRUE)
+ 
+ ## Subset full data set to include Subject, Activity, and extracted variable names
+ refinedHarData <- combinedHarData[,c("Subject", "Activity", meanSDHarCols)]
+
+```
+
+##3rd Requirement - Use activity labels. 
+The original activity data is identified with a numeric value ranging from 1 to 6. Those values were replaced with the contents of the activity_labels.txt file which was first imported and stored as a data frame. The values in the refinedHarData activity variable were replaced with the values from the text document using the factor() function. Note that the actual activity values were located in the 2nd column of the activityLabels dataframe.
+
+##Required files:
+* activity_labels.txt
+
+```{r}
+ ## 3rd Requirement - Use activity labels
+ ## Add activity labels to working data set and replace values in Activity column
+ activityLabels <- read.table("./UCI HAR Dataset/activity_labels.txt")
+ refinedHarData$Activity <- factor(refinedHarData$Activity, levels = 1:6, labels = activityLabels$V2)
+```
+
+##4th Requirement - Appropriately labels the data set with descriptive variable names. 
+In general the guidelines outlined in the Getting and Cleaning Data lectures were followed. The objective in choosing what values to modify was to keep it simple. What should, or should not, be modified and in what way is to some degree subjective. Others can very simply alter the names to those they feel are more descriptive, easier to read, or to suit their personal or organizational requirements.
+
+##Selected modifications:
+* All names were pushed to lower case
+* Variable names that started with "t" -> "time"
+* Variable names that started with "f" -> "freq"
+* Variable names that contained "acc" -> "acceleration"
+* Variable names that contained "gyro" -> "gyroscopic"
+* Variable names that contained "mag" -> "magnitude"
+
+```{r}
+## 4th Requirement - Appropriately labels the data set with descriptive variable names.
+## These follow lecture guidelines of all lower case variable names though it makes it
+## more difficult to read with more descriptive names.
+ names(refinedHarData) <- tolower(names(refinedHarData))
+ names(refinedHarData) <- sub("^t", "time", names(refinedHarData))
+ names(refinedHarData) <- sub("^f", "freq", names(refinedHarData))
+ names(refinedHarData) <- sub("acc", "acceleration", names(refinedHarData))
+ names(refinedHarData) <- sub("gyro", "gyroscopic", names(refinedHarData))
+ names(refinedHarData) <- sub("mag", "magnitude", names(refinedHarData))
+``` 
+ 
+##5th Requirement - Create a tidy data set with the average of each variable for each activity and each subject. Write the tidy data to an output file. 
+This step used the aggregate() function to group by subject and activity and calculate the mean on the measurement variables. The results are stored in the tidyHarData dataset, and are written to the local directory as "Summary_HAR_Statistics.csv".
+
+```{r}
+##create a tidy data set with the average of each variable for each activity and each subject.
+ tidyHarData <- aggregate(. ~subject + activity, refinedHarData, mean)
+ 
+##write tidy data set to output file
+ write.csv(tidyHarData, file = "Summary_HAR_Statistics.csv", row.names = FALSE)
+ 
+##End of R Script
+```
+
+
+
